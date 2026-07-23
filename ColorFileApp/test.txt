@@ -1,0 +1,35 @@
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. 
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. 
+
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Test values:
+#fefefe;
+"blue";
+
+#ececec
+blue
+
+rgb(120, 16, 22);
+rgb(120, 16, 22);
+
+rgba(120, 15, 22, 0.5);
+
+
+h1, h2 {
+	color: #AaBBcC;
+}
+
+.div-test {
+	background-color: blue;
+	
+}
+
+.text-test-hex3 {
+	border: #ccc;
+}
+
+.span-red {
+	background: #a1a1A1;
+}
