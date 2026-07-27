@@ -1,13 +1,13 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Request
 from fastapi.responses import JSONResponse
-import os
+import logging
+
 from pydantic import BaseModel, PositiveInt
 import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
 from validators import DocumentValidator
-import logging
 
 """
 CLI curl commands:
@@ -20,23 +20,28 @@ curl -d @data.json http://127.0.0.1:8000/api/upload/single
    
    
 """
+'''
+ NOTE: To log HTTP request/response messages, run this in the terminal:
+ > uvicorn main:app --reload --log-level debug
+
+
+'''
+
+# ============= Data structures =============
 # Create Pydantic data model for JSON options received in HTTP body
 class LightdarkHex(BaseModel):
     active: bool
     mode: str
     percent: PositiveInt
 
-
 class LightdarkRgb(BaseModel):
     active: bool
     mode: str
     percent: PositiveInt
 
-
 class ColorswapHex(BaseModel):
     active: bool
     order: str
-
 
 class ColorswapRgb(BaseModel):
     active: bool
@@ -69,6 +74,7 @@ class Options(BaseModel):
     colorswap_hex: ColorswapHex
     colorswap_rgb: ColorswapRgb
 
+# ============= END DATA STRUCTURES=============
 
 
 # Create our upload directory
@@ -79,18 +85,31 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 doc_validator = DocumentValidator(max_size=25 * 1024 * 1024)  # 25MB limit
 
 # Enable the FastAPI logger for debugging
-logger = logging.getLogger('uvicorn.error')
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
     root_path="/api",
     title="FastAPI file upload API",
 )
 
+
+# ==== Middleware for logging or deubgging purposes ====
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    body = await request.body()
+    if body:
+        logger.info(f"Body: {body.decode()}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
+
 # ==== GET endpoints ====
 @app.get("/")
 def read_test():
     return { "message": "Working ok" }
+
 
 # ==== POST endpoints ====
 
@@ -105,7 +124,27 @@ async def receive_file_options(options: Options):
         "colorswap_hex": options.colorswap_hex
     }
 
-
+# # Accepts a request and body contains a file upload + JSON option parameters
+# @app.post("/upload/eval-file")
+# async def upload_file_and_options(options: Options, file: UploadFile = File(...)):
+#     option_params = options
+#     # .... insert code here...
+    
+#     content = await file.read()
+    
+#     return {
+#         "option_params": {
+#                     "hex_rgb": options.hex_rgb,
+#                     "hex_hsl": options.hex_hsl,
+#                     "lightdark_hex": options.lightdark_hex,
+#                     "colorswap_hex": options.colorswap_hex
+#         },
+#         "file_params": {
+#             "name": file.filename,
+#             "content": content
+#         }
+#     }
+    
 # Accepts a request and uploads a file after validationn
 @app.post("/upload/single")
 async def upload_single_file(file: UploadFile = File(...)):
