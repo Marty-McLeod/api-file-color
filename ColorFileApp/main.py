@@ -1,12 +1,13 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Request
 from fastapi.responses import JSONResponse
 import logging
+from .models import Options
 
-from pydantic import BaseModel, PositiveInt
 import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
+import random 
 from validators import DocumentValidator
 
 """
@@ -26,55 +27,6 @@ curl -d @data.json http://127.0.0.1:8000/api/upload/single
 
 
 '''
-
-# ============= Data structures =============
-# Create Pydantic data model for JSON options received in HTTP body
-class LightdarkHex(BaseModel):
-    active: bool
-    mode: str
-    percent: PositiveInt
-
-class LightdarkRgb(BaseModel):
-    active: bool
-    mode: str
-    percent: PositiveInt
-
-class ColorswapHex(BaseModel):
-    active: bool
-    order: str
-
-class ColorswapRgb(BaseModel):
-    active: bool
-    order: str
-    
-class Options(BaseModel):
-    # hex: bool  # Initial test parameters
-    # name: bool
-    # rgba: bool
-    # color_val: str
-    hex_rgb: bool 
-    hex_hsl: bool
-    
-    name_hex: bool
-    name_rgb: bool
-    
-    rgb_hsl: bool
-    rgb_hex: bool
-    
-    hsl_hex: bool
-    hsl_rgb: bool
-    hsl_hsv: bool
-    hsv_hsl: bool
-    
-    hsv_hex: bool
-    hsv_rgb: bool
-
-    lightdark_hex: LightdarkHex
-    lightdark_rgb: LightdarkRgb
-    colorswap_hex: ColorswapHex
-    colorswap_rgb: ColorswapRgb
-
-# ============= END DATA STRUCTURES=============
 
 
 # Create our upload directory
@@ -145,13 +97,20 @@ async def receive_file_options(options: Options):
 #         }
 #     }
     
-# Accepts a request and uploads a file after validationn
+# Accepts a request and uploads a file after validation
 @app.post("/upload/single")
-async def upload_single_file(file: UploadFile = File(...)):
-    """ Upload a single file with basic validation """
-    # Validate the file first
+async def upload_single_file(options: Options, file: UploadFile = File(...)):
+    '''
+    Uploads color task options (JSON object) and a single file.
+    The uploaded file is validated as the correct type and that its content is accessible.
+    '''
+    params = options
+    
+    # Validate the file first. 
     validation = await doc_validator.validate_file(file)
-
+    
+    # Raise/return HTTP error if an error condition exists for the file. validation()
+    # supplies error messages which are returned to the client/user.
     if not validation["valid"]:
         raise HTTPException(
             status_code=400,
@@ -160,11 +119,14 @@ async def upload_single_file(file: UploadFile = File(...)):
                     "errors": validation["errors"]
                     }
         )
-
-    # Create unique filename to prevent conflicts
+        
+    # == Validation has passed ==
+    # Create unique temp filename to prevent conflicts
     file_ext = Path(file.filename).suffix
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = UPLOAD_DIR / unique_filename
+    # unique_filename = f"{uuid.uuid4()}{file_ext}"
+    temp_filename = f"{file.filename}{format(random.randrange(999_999), "06d")}{file_ext}"
+    
+    file_path = UPLOAD_DIR / temp_filename
     
     try:
         with open(file_path, "wb") as buffer:
@@ -175,10 +137,14 @@ async def upload_single_file(file: UploadFile = File(...)):
             detail = f"Failed to save file: {str(e)}"
         )
         
+    # Call color functions as needed; iterate through options object
+    # & determine tasks needed
+    
+    
     return {
         "success": True,
         "original_filename": file.filename,
-        "stored_filename": unique_filename,
+        "stored_filename": temp_filename,
         "content_type": file.content_type,
         "size": file.size,
         "upload_time": datetime.utcnow().isoformat(),
