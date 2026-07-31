@@ -24,9 +24,9 @@ ERROR VALUES:
 /* Hexadecimal */
 body {
     background: #ECG0EC;  /* Contains value outside of valid range */
-    color: #2463E;        /* Contains invalid no. of characters */
+    color: #2463E; /* Contains invalid no. of characters */
 }
-    
+
 p .p-highlight {
     color: #FF0000G; /* invalid value: extra character + char is over max. value */
 }

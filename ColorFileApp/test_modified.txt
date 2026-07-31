@@ -53,8 +53,8 @@ a .a-hsl-test {
 a .a-hsv-test {
     color: hsv(361, 85%, 92%); /* Contains invalid value */
     color: hsv(221, 85%, 92%, 0%); /* Contains invalid num. of values */
-    color: hsv(221, 85%, 92%);
-    color: HSV(221, 85%, 92%);
+    color: rgb(24, 63, EB);
+    color: rgb(24, 63, EB);
 }
 
 /* miscellaneous */

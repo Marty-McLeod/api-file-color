@@ -31,9 +31,6 @@
         "hex_rgb": true, 
         "hex_hsl": false,
 
-        "name_hex": false,
-        "name_rgb": false,
-
         "rgb_hsl": false,
         "rgb_hex": false,
 
@@ -44,6 +41,9 @@
         "hsv_hsl": false,
         "hsv_hex": false,
         "hsv_rgb": false,
+
+        "name_hex": false,
+        "name_rgb": false,
 
         "lightdark_hex": { "active": false, "mode": "lighten", "percent": 10 },
         "lightdark_rgb": { "active": false, "mode": "lighten", "percent": 10 },
