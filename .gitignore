@@ -1,2 +1,5 @@
 # Ignore the Python virtual environment directory
 apivenv/
+
+# Ignore error/status log output file
+match_log.txt

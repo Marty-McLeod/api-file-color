@@ -47,6 +47,7 @@
 
         "lightdark_hex": { "active": false, "mode": "lighten", "percent": 10 },
         "lightdark_rgb": { "active": false, "mode": "lighten", "percent": 10 },
+        
         "colorswap_hex": { "active": false, "order": "r_to_g" },
         "colorswap_rgb": { "active": false, "order": "r_to_g" }
 

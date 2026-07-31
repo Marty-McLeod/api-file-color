@@ -1,0 +1,17 @@
+ ======================== MATCH REPORT FOR MODE hex_to_rgb ========================{
+    "lines": 78,
+    "changes": 3,
+    "skipped": 3,
+    "error_stats": {
+        "1": [
+            "Invalid char in 'ECG0EC', line 26"
+        ],
+        "2": [
+            "Invalid length of 5 in '2463E', line 27"
+        ],
+        "3": [
+            "Invalid length of 7 in 'FF0000G', line 31",
+            "Invalid char in 'FF0000G', line 31"
+        ]
+    }
+}3 replacements made out of 78 lines.             3 invalid terms skipped.----------------------------------------------------------------------------------
