@@ -33,13 +33,13 @@ p .p-highlight {
 
 /* rgb() */
 div .div-color {
-    color: rgb(256, 99, 235); /* Contains invalid value */
-    background-color: rgb(36, 99, 235, 0); /* Invalid value count */
+    color: rgb(255, 124, 255); /* Contains invalid value */
+    background-color: rgb(61, 124, 255); /* Invalid value count */
 }
 
 a .a-rgb-test {
-    color: rgb(36, 99,235);
-    color: RGB(36, 99, 235);
+    color: rgb(61, 124, 255);
+    color: rgb(61, 124, 255);
 }
 
 a .a-hsl-test {
@@ -64,7 +64,7 @@ h1, h2 {
 }
 
 .div-test {
-	background-color: rgb(0, 0, 255);
+	background-color: blue;
 	
 }
 
