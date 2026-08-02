@@ -1,0 +1,33 @@
+••••••••• STATUS FOR OPERATION blacklist •••••••••
+{
+  "lines": 0,
+  "changes": 0,
+  "skipped": 0,
+  "error_stats": "Blacklist in blacklist.json loaded ok."
+}
+
+0 replacement(s) made out of 0 lines. 0 invalid terms skipped.
+••••••••••••••••••••••••••••••••••••••••••••••••••
+
+••••••••• STATUS FOR OPERATION hex_rgb •••••••••
+{
+  "lines": 78,
+  "changes": 2,
+  "skipped": 3,
+  "error_stats": {
+    "1": [
+      "Invalid char in 'ECG0EC', line 26"
+    ],
+    "2": [
+      "Invalid length of 5 in '2463E', line 27"
+    ],
+    "3": [
+      "Invalid length of 7 in 'FF0000G', line 31",
+      "Invalid char in 'FF0000G', line 31"
+    ]
+  }
+}
+
+2 replacement(s) made out of 78 lines. 3 invalid terms skipped.
+••••••••••••••••••••••••••••••••••••••••••••••••
+

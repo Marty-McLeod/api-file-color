@@ -24,7 +24,11 @@ ERROR VALUES:
 /* Hexadecimal */
 body {
     background: #ECG0EC;  /* Contains value outside of valid range */
-    color: #2463E; /* Contains invalid no. of characters */
+    color: #2463E;        /* Contains invalid no. of characters */
+}
+    
+p .p-highlight {
+    color: #FF0000G; /* invalid value: extra character + char is over max. value */
 }
 
 /* rgb() */
@@ -33,10 +37,30 @@ div .div-color {
     background-color: rgb(36, 99, 235, 0); /* Invalid value count */
 }
 
-CSS style code snippets:
+a .a-rgb-test {
+    color: rgb(36, 99,235);
+    color: RGB(36, 99, 235);
+}
+
+a .a-hsl-test {
+    color: hsl(221, 83, 53);
+    color: HSL(221, 83, 53);
+
+    color: hsl(221, 83, 53, 0);
+    color: hsl(221, 101, 53);
+}
+
+a .a-hsv-test {
+    color: hsv(361, 85%, 92%); /* Contains invalid value */
+    color: hsv(221, 85%, 92%, 0%); /* Contains invalid num. of values */
+    color: hsv(221, 85%, 92%);
+    color: HSV(221, 85%, 92%);
+}
+
+/* miscellaneous */
 
 h1, h2 {
-	colorAaBBcC
+	color: #AaBBcC;
 }
 
 .div-test {
@@ -45,10 +69,9 @@ h1, h2 {
 }
 
 .text-test-hex3 {
-	borderccc
+	border: rgb(204, 204, 204);
 }
 
 .span-red {
-	backgrounda1a1A1
+	background: rgb(161, 161, 161);
 }
-================================================================================{'changes': 3, 'skipped': 2, 'error_stats': {1: ["Invalid HEX value: invalid length or char in 'ECG0EC', line 25"], 2: ["Invalid HEX value: invalid length or char in '2463E', line 26"]}}

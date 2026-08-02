@@ -2,7 +2,7 @@
 
 #### Color functionality
 
-
+_(Done)_
 - [x] Validation / error handling function
 
 - [x] Shift (swap) colors from R to G / G to R, G to B/B to G, R to B/B to R
@@ -26,6 +26,8 @@
 - [x] Convert HSV to RGB
 - [x] Convert HSV to HEX
 
+### Structure for the JSON options data object 
+```
 {
     "options": { 
         "hex_rgb": true, 
@@ -53,3 +55,4 @@
 
     }
 }
+```

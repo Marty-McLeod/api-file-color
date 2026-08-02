@@ -3,3 +3,7 @@ apivenv/
 
 # Ignore error/status log output file
 match_log.txt
+
+# Disregard the VS Code settings that are saved in the work folder
+# for some reason
+.vscode/
