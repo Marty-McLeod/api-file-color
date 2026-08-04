@@ -3,7 +3,7 @@ Color code functions module. Data (color codes) passed in a function call are va
 error handler, which returns error objects (dictionaries), as needed. Color functions handle color
 code format conversion.
 """
-from .utils.file_functions import load_dict_from_json, write_log_file
+
 
 
 def color_code_error_handler(value, value_type, option="", color_dict=None) -> dict | None:

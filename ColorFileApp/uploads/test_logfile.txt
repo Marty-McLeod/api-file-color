@@ -1,0 +1,11 @@
+--------- STATUS FOR OPERATION name_hex ---------
+{
+  "lines": 78,
+  "changes": 1,
+  "skipped": 0,
+  "error_stats": {}
+}
+
+1 replacement(s) made out of 78 lines. 0 invalid terms skipped.
+-------------------------------------------------
+

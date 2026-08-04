@@ -7,3 +7,7 @@ match_log.txt
 # Disregard the VS Code settings that are saved in the work folder
 # for some reason
 .vscode/
+
+# Disregard the test file outputs (text files). These may need to be
+# changed or see if a wildcard can be used(?)
+test_output.txt

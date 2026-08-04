@@ -13,7 +13,7 @@ if present.
 import re
 import os
 from color_functions import *
-from .utils.file_functions import load_dict_from_json, write_log_file
+from utils.file_functions import load_dict_from_json, write_log_file
 
 
 # ================ REGEX EXPRESSIONS FOR TERM MATCHING ==========
@@ -27,7 +27,8 @@ REGEX_NAME = re.compile(r"(?i)(:\s*)([a-zA-Z]{3,})(;)") # Uses case-insensitive 
 
 
 # Top level function for processing a file & using matched values to call color functions as specified
-def file_color_processor(target_filename, source_filename, options, logfile_name_path="", white_filename="", black_filename="") -> dict:
+def file_color_processor(target_filename, source_filename, options, logfile_name_path="", white_filename="", black_filename="",\
+    color_name_dict="") -> dict:
     '''
     Top level function to read, write, and manipulate files while using color functions based on the user JSON 
     options received.
@@ -61,9 +62,9 @@ def file_color_processor(target_filename, source_filename, options, logfile_name
     
     # As the name color function is a special case, additional parameters are used when calling. To preserve passing
     # a function to process_lines_with_regex(), bind the required arguments prior to passing the function.
-    named_color_to_hex = lambda color_name: named_color_to_value(color_name, color_name_dict=options, \
+    named_color_to_hex = lambda color_name: named_color_to_value(color_name, color_name_dict=color_name_dict, \
                                                                  code_format="hex")
-    named_color_to_rgb = lambda color_name: named_color_to_value(color_name, color_name_dict=options, \
+    named_color_to_rgb = lambda color_name: named_color_to_value(color_name, color_name_dict=color_name_dict, \
                                                                  code_format="rgb")
     
 

@@ -29,7 +29,8 @@ _(Done)_
 ### Structure for the JSON options data object 
 ```
 {
-    "options": { 
+    "options": 
+    { 
         "hex_rgb": true, 
         "hex_hsl": false,
 
@@ -44,7 +45,7 @@ _(Done)_
         "hsv_hex": false,
         "hsv_rgb": false,
 
-        "name_hex": false,
+        "name_hex": true,
         "name_rgb": false,
 
         "lightdark_hex": { "active": false, "mode": "lighten", "percent": 10 },
@@ -52,7 +53,6 @@ _(Done)_
         
         "colorswap_hex": { "active": false, "order": "r_to_g" },
         "colorswap_rgb": { "active": false, "order": "r_to_g" }
-
     }
 }
 ```
