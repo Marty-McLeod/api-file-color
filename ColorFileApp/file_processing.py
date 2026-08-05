@@ -28,33 +28,12 @@ REGEX_NAME = re.compile(r"(?i)(:\s*)([a-zA-Z]{3,})(;)") # Uses case-insensitive 
 
 # Top level function for processing a file & using matched values to call color functions as specified
 def file_color_processor(target_filename, source_filename, options, logfile_name_path="", white_filename="", black_filename="",\
-    color_name_dict="") -> dict:
+    color_name_dict=""):
     '''
-    Top level function to read, write, and manipulate files while using color functions based on the user JSON 
-    options received.
+    Uses a top level function to read, write, and manipulate files while using color functions
+    based on the user JSON options received.
 
-    Accepts:
-    - target_filename: name & path (string) for the output file; typically the file received via an API request.
-    - source_filename: Same as above, but the file while will be processed & output in the name/path <target_filename>
-    - options: dict object structure containing color code functionality options. See "dev_notes.md" for the
-    - logfile_name_path: (optional) Specifies name/path for log file to be written, if present.
-      example. Must contain all key/value pairs, even if not used.
-    - white_filename: (optional) color code whitelist filename & path. If present, will be loaded as a list and
-      passed to process_lines_with_regex(). Whitelist = ONLY these color codes (strings) will be modified if a match
-      is found in the source file.
-    - black_filename: (optional) The inverse of above - process_lines_with_regex() will match/modify all color values
-      EXCEPT those in the blacklist.
-      
-    
-    Outputs: 
-    - (optional) Logfile containing report objects (dicts) with data counts all changes made or skipped and any errors.
-      One status report object is written to the log file for each color function used.
-    
-    Note: 
-    • Both whitelist *and* blacklist cannot both be used; if both are passed to the function, whitelist file
-    takes precedence and the blacklist is ignored.
-    • If a whitelist or blacklist is supplied, the status of reading the file & loading the data is reported to the
-    logfile as well, if "logfile_name_path" is provided, before the report objects.
+    Returns a report object (dict) with data counts for all files processed + change counts.
     '''
     # report = { "lines": 0, "changes": 0, "skipped": 0, "error_stats": {} } # Tracks changes made and error values
     # linecount = report["lines"] # Alias variable
@@ -68,12 +47,14 @@ def file_color_processor(target_filename, source_filename, options, logfile_name
                                                                  code_format="rgb")
     
 
-    # Check for an existing log file. If true, delete it as a new one will be created & appended to.
-    if os.path.isfile(logfile_name_path):
-        os.remove(logfile_name_path)
-        print(f"Previous file {logfile_name_path} found and deleted. Starting new log file.")
-    else:
-        print(f"Previous {logfile_name_path} not found; no action taken.")
+    # If 'logfile_name_path' is supplied, check for an existing log file. If true, delete it as 
+    # a new one will be created & appended to.
+    if logfile_name_path:
+        if os.path.isfile(logfile_name_path):
+            os.remove(logfile_name_path)
+            print(f"Previous file {logfile_name_path} found and deleted. Starting new log file.")
+        else:
+            print(f"Previous {logfile_name_path} not found; no action taken.")
         
     # Check for a whitelist or blacklist file. If found, validate JSON format. Loads the 
     # Default is no lists, so set them to None initially
@@ -87,8 +68,12 @@ def file_color_processor(target_filename, source_filename, options, logfile_name
             reports |= { "whitelist": { "lines": 0, "changes": 0, "skipped": 0, "error_stats": {result} } }
         else:
             # Save a success user message in the stats for the whitelist report
-            reports |= { "whitelist": { "lines": 0, "changes": 0, "skipped": 0, "error_stats": \
-                                        f"Whitelist in {white_filename} loaded ok." } }
+            # NOTE! Uses the same error dict structure as for match errors (int key, values = list of strings)            
+            reports |= { "whitelist": {  \
+                "lines": 0, "changes": 0, "skipped": 0, "error_stats": { \
+                    "1": [f"Whitelist in {white_filename} loaded ok."] } \
+                    }\
+                }
             # Convert dictionary to a list; ensure all strings are upper case before passing to ensure matches work
             whitelist = [val.upper() for val in result.get("whitelist") ]
                                       
@@ -98,9 +83,13 @@ def file_color_processor(target_filename, source_filename, options, logfile_name
         if "error" in result:
             reports |= { "blacklist": { "lines": 0, "changes": 0, "skipped": 0, "error_stats": {result} } }  
         else:
-            # Save a success user message in the stats for the whitelist report
-            reports |= { "blacklist": { "lines": 0, "changes": 0, "skipped": 0, "error_stats": \
-                                        f"Blacklist in {black_filename} loaded ok." }  }
+            # Save a success user message in the stats for the whitelist report.
+            # NOTE! Uses the same error dict structure as for match errors (int key, values = list of strings)
+            reports |= { "blacklist": { \
+                "lines": 0, "changes": 0, "skipped": 0, \
+                "error_stats": { "1": [f"Blacklist in {black_filename} loaded ok."] }  \
+                }\
+            }
             # Convert dictionary to a list; ensure all strings are lower case before passing
             blacklist = [val.upper() for val in result.get("blacklist") ]
     
@@ -213,8 +202,10 @@ def file_color_processor(target_filename, source_filename, options, logfile_name
     # -----------------------------------        
     # Save match status reports to a log file
     # function: write_log_file(filename_path, data_object, color_mode, write_mode="a"):
-    for rep_key, rep_val in reports.items():
-        write_log_file(logfile_name_path, data_object=rep_val, color_mode=rep_key)
+    if logfile_name_path:
+        # for rep_key, rep_val in reports.items():
+        #     write_log_file(logfile_name_path, data_object=rep_val, style="text", color_mode=rep_key)
+        write_log_file(logfile_name_path, data_object=reports, source_filename=source_filename, style="text")
 
 
 # Child function called by file_color_processing - process a specified file one line at a time when called by
