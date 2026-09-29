@@ -9,7 +9,7 @@ from pathlib import Path
 import random, json, os, logging
 
 from validators import DocumentValidator
-from models import Options
+from models import Options, PayloadWrapper
 from file_processing import file_color_processor
 from utils.file_functions import load_dict_from_json
 
@@ -76,7 +76,7 @@ def read_test():
 
 # Receives a POST request with color options in body
 @app.post("/upload/options")
-async def receive_file_options(options: Options):
+async def receive_file_options(options: PayloadWrapper):
     
     return {
         "hex_rgb": options.hex_rgb,
