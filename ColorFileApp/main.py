@@ -46,8 +46,8 @@ except NameError:
 doc_validator = DocumentValidator(max_size=25 * 1024 * 1024)  # 25MB limit
 
 # Enable the FastAPI logger for debugging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("uvicorn")
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -76,13 +76,20 @@ def read_test():
 
 # Receives a POST request with color options in body
 @app.post("/upload/options")
-async def receive_file_options(options: PayloadWrapper):
+async def receive_file_options(options_payload: PayloadWrapper):
+
+    # Example of accessing a single dict in the validated data ( is in a list):
+    # data = options_payload.options[0].hex_rgb
+    # print("\noptions_payload:", data)
     
     return {
-        "hex_rgb": options.hex_rgb,
-        "hex_hsl": options.hex_hsl,
-        "lightdark_hex": options.lightdark_hex,
-        "colorswap_hex": options.colorswap_hex
+        "received": {
+            "options_payload": options_payload,
+        }
+        # "hex_rgb": options.hex_rgb,
+        # "hex_hsl": options.hex_hsl,
+        # "lightdark_hex": options.lightdark_hex,
+        # "colorswap_hex": options.colorswap_hex
     }
 
 # # Accepts a request and body contains a file upload + JSON option parameters
@@ -110,7 +117,7 @@ async def receive_file_options(options: PayloadWrapper):
 # 1. Stringified JSON structure 'options' containing user options for color functions
 # 2. A file containing text w/ color codes to be affected by the functions
 @app.post("/upload/file")
-async def upload_single_file(options: str = Form(...), file: UploadFile = File(...)):
+async def upload_single_file(options_payload: str = Form(...), file: UploadFile = File(...)):
     """
     Uploads color task options (JSON object) and a single file.
     The uploaded file is validated as the correct type and that its content is accessible.
@@ -127,14 +134,14 @@ async def upload_single_file(options: str = Form(...), file: UploadFile = File(.
     # As the JSON options data is sent as a string, validate it (parsed) as JSON for the
     # Pydantic model, Options
     try:
-        Options.model_validate_json(options)
+        Options.model_validate_json(options_payload)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=jsonable_encoder(e.errors())
         )
         
-    options_dict = json.loads(options)
+    options_dict = json.loads(options_payload)
     # logger.info("options_valid:", str(options_dict))
     
     # Validate the file sent via the body of the request
