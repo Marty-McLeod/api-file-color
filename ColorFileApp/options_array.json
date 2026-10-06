@@ -1,0 +1,40 @@
+{
+    "options": [
+        { "hex_rgb": true }, 
+        { "hex_hsl": false },
+        { "name_hex": false },
+        { "name_rgb": false },
+        { "rgb_hsl": false },
+        { "rgb_hex": false },
+        { "hsl_hex": false },
+        { "hsl_rgb": false },
+        { "hsl_hsv": false },
+        { "hsv_hsl": false },
+        { "hsv_hex": false },
+        { "hsv_rgb": false },
+        { "lightdark_hex": false, "mode": "lighten", "percent": 10 },
+        { "lightdark_rgb": false, "mode": "lighten", "percent": 10 },
+        { "colorswap_hex": false, "order": "r_to_g" },
+        { "colorswap_rgb": false, "order": "r_to_g" }   
+    ],
+
+    "optionLabels": [
+        { "hex_rgb": "Hex to RGB" }, 
+        { "hex_hsl": "Hex to HSL" },
+        { "name_hex": "Name to hex" },
+        { "name_rgb": "Name to RGB" },
+        { "rgb_hsl": "RGB to HSL" },
+        { "rgb_hex": "RGB to HEX" },
+        { "hsl_hex": "HSL to HEX" },
+        { "hsl_rgb": "HSL to RGB" },
+        { "hsl_hsv": "HSL to HSV" },
+        { "hsv_hsl": "HSV to HSL" },
+        { "hsv_hex": "HSV to HEX" },
+        { "hsv_rgb": "HSV to RGB" },
+        { "lightdark_hex": "HEX light/dark" },
+        { "lightdark_rgb": "RGB light/dark" },
+        { "colorswap_hex": "Colorswap HEX" },
+        { "colorswap_rgb": "Colorswap RGB" }           
+    ]
+
+}
