@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Form, status
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 import shutil
 import uuid
@@ -9,7 +10,7 @@ from pathlib import Path
 import random, json, os, logging
 
 from validators import DocumentValidator
-from models import Options, PayloadWrapper
+from models import  PayloadWrapperListType
 from file_processing import file_color_processor
 from utils.file_functions import load_dict_from_json
 
@@ -55,7 +56,20 @@ app = FastAPI(
     title="FastAPI file upload API",
 )
 
-    
+# @app.exception_handler(RequestValidationError)
+# async def validation_exception_handler(request: Request, exc: RequestValidationError):
+#     errors = {}
+#     for err in exc.errors():
+#         loc = [p for p in err["loc"] if p not in ("body", "query", "path", "header", "cookie")]
+#         field = ".".join(str(p) for p in loc) or "__root__"
+#         # first error per field wins; keep it simple for the UI
+#         errors.setdefault(field, err["msg"])
+#     return JSONResponse(
+#         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+#         content={"errors": errors},
+#     )
+
+
 # ==== Middleware for logging or deubgging purposes ====
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -76,7 +90,7 @@ def read_test():
 
 # Receives a POST request with color options in body
 @app.post("/upload/options")
-async def receive_file_options(options_payload: PayloadWrapper):
+async def receive_file_options(options_payload: PayloadWrapperListType):
 
     # Example of accessing a single dict in the validated data ( is in a list):
     # data = options_payload.options[0].hex_rgb
@@ -134,7 +148,7 @@ async def upload_single_file(options_payload: str = Form(...), file: UploadFile 
     # As the JSON options data is sent as a string, validate it (parsed) as JSON for the
     # Pydantic model, Options
     try:
-        Options.model_validate_json(options_payload)
+        PayloadWrapperListType.model_validate_json(options_payload)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -246,7 +260,7 @@ async def upload_multiple_files(options: str = Form(...), files: list[UploadFile
     # As the JSON options data is sent as a string, validate it (parsed) as JSON for the
     # Pydantic model, Options
     try:
-        Options.model_validate_json(options)
+        PayloadWrapperListType.model_validate_json(options)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
