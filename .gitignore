@@ -11,3 +11,10 @@ match_log.txt
 # Disregard the test file outputs (text files). These may need to be
 # changed or see if a wildcard can be used(?)
 test_output.txt
+
+# Disregard Python cached files
+ColorFileApp/__pycache__/
+
+# Environment variables file should not/cannot be pushed to GitHub
+ColorFileApp/.env
+

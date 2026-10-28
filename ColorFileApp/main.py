@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Form, sta
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 import shutil
 import uuid
@@ -55,6 +56,16 @@ app = FastAPI(
     root_path="/api",
     title="FastAPI file upload API",
 )
+origins = ["http://localhost:5173"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # @app.exception_handler(RequestValidationError)
 # async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -82,9 +93,9 @@ async def log_requests(request: Request, call_next):
     return response
 
 # ==== GET endpoints ====
-@app.get("/")
+@app.get("/message")
 def read_test():
-    return { "message": "Working ok" }
+    return { "message": "Hello from FastAPI & ColorSwap!" }
 
 # ==== POST endpoints ====
 
