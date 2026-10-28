@@ -5,7 +5,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 import shutil
-import uuid
+from dotenv import load_dotenv
+import resend
+from resend.exceptions import ResendError
 from datetime import datetime
 from pathlib import Path
 import random, json, os, logging
@@ -66,6 +68,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configurations for using the Resend service to send emails
+load_dotenv()
+resend.api_key = os.getenv("RESEND_API_KEY")
+
+params: resend.Emails.SendParams = {
+    "from": "Acme <onboarding@resend.dev>",
+    "to": ["delivered@resend.dev"],
+    "subject": "hello world",
+    "html": "<strong>it works!</strong>",
+}
+
 
 # @app.exception_handler(RequestValidationError)
 # async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -97,7 +110,46 @@ async def log_requests(request: Request, call_next):
 def read_test():
     return { "message": "Hello from FastAPI & ColorSwap!" }
 
+@app.get("/email-test")
+def send_email():
+    resend_status = ""
+    
+    try:
+        email = resend.Emails.send(params)
+        print(email)
+        resend_status = "Email sent"
+    except ResendError as error:
+        print(error)
+        resend_status = error.message
+        
+    return(
+        {
+            "email_status": resend_status
+        }
+    )
+    
+    
 # ==== POST endpoints ====
+
+# Send email for API key use
+@app.post("/send")
+def send_email():
+    resend_status = ""
+    
+    try:
+        email = resend.Emails.send(params)
+        # print(email)
+        resend_status = "Email sent"
+    except ResendError as error:
+        print(error)
+        resend_status = error.message
+        
+    return(
+        {
+            "email_status": resend_status
+        }
+    )
+
 
 # Receives a POST request with color options in body
 @app.post("/upload/options")
