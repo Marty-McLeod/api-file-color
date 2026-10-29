@@ -13,7 +13,7 @@ from pathlib import Path
 import random, json, os, logging
 
 from validators import DocumentValidator
-from models import  PayloadWrapperListType
+from models import  PayloadWrapperListType, EmailMessage
 from file_processing import file_color_processor
 from utils.file_functions import load_dict_from_json
 
@@ -133,20 +133,26 @@ def send_email():
 
 # Send email for API key use
 @app.post("/send")
-def send_email():
+def send_email(email_payload: EmailMessage):
     resend_status = ""
+    # print(">>> Payload:", email_payload)
     
+    email_params: resend.Emails.SendParams = {    
+        "from": email_payload.from_field,
+        "to": email_payload.to,
+        "subject": email_payload.subject,
+        "html": email_payload.html
+    }
+
     try:
-        email = resend.Emails.send(params)
-        # print(email)
-        resend_status = "Email sent"
+        smtp_response = resend.Emails.send(email_params)
+        resend_status = "Email sent!"
     except ResendError as error:
-        print(error)
         resend_status = error.message
         
     return(
         {
-            "email_status": resend_status
+            "email_status": resend_status,
         }
     )
 

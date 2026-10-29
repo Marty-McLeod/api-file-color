@@ -4,7 +4,8 @@ endpoing option data objects received
 '''
 from pydantic import (
     BaseModel, conint, Field, 
-    ConfigDict, field_validator
+    ConfigDict, field_validator,
+    StringConstraints
 )
 from collections import Counter
 from typing import Literal, Annotated, Union, get_args, Any
@@ -60,6 +61,33 @@ LIGHTDARK_ALLOWED_MODE_VALS = [ "lighten", "darken" ]
 COLORSWAP_ALLOWED_KEY_NAMES = [ "colorswap_hex", "colorswap_rgb" ]
 COLORSWAP_ALLOWED_PARAM_KEY_NAMES = [ "order" ]
 COLORSWAP_ALLOWED_ORDER_VALS = [ "r_to_g", "g_to_r", "g_to_b", "b_to_g", "r_to_b", "b_to_r" ]
+
+
+class EmailMessage(BaseModel):
+    # Required fields (must use an alias for "from" as it's a reserved keyword)
+    from_field: Annotated[
+            str, StringConstraints(min_length=3, max_length=30, to_lower=True),
+            Field(alias="from") ]
+    to:  Annotated[
+            str, StringConstraints(min_length=3, max_length=30, to_lower=True) ]
+    subject: Annotated[
+            str, StringConstraints(min_length=3, max_length=60) ]
+    # Optional fields
+    bcc:  Annotated[
+            str | None , StringConstraints(min_length=3, max_length=30, to_lower=True)
+            ] = None
+    bcc:  Annotated[
+            str | None, StringConstraints(min_length=3, max_length=30, to_lower=True)
+            ] = None               
+    reply_to:  Annotated[
+            str | None, StringConstraints(min_length=3, max_length=30, to_lower=True)
+            ] = None            
+    html:  Annotated[
+            str | None, StringConstraints(max_length=400)] = ""            
+    text:  Annotated[
+           str | None, StringConstraints(max_length=400)] = ""           
+
+    
 
 # == Validation models for options JSON array, containing an array (list) ==
 #   I.e.:
@@ -130,7 +158,6 @@ class OptionConvertHsvRgb(ComponentBase):
 class OptionColorswapHex(ComponentBase):
     colorswap_hex: bool # R/G/B colorswapping conv.
     order: COLORSWAP_ORDER_VALS_LITERAL # Defines list of acceptable strings/order values
-
 
 class OptionColorswapRgb(ComponentBase):
     colorswap_rgb: bool
