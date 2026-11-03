@@ -1,21 +1,62 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Form, status
+from fastapi import (
+    FastAPI, File, UploadFile, 
+    HTTPException, Request, Form, 
+    status, Depends, Path, Query
+)
+
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
+from typing import Annotated
 import shutil
 from dotenv import load_dotenv
 import resend
 from resend.exceptions import ResendError
-from datetime import datetime
-from pathlib import Path
+import pathlib as plb
 import random, json, os, logging
 
 from validators import DocumentValidator
 from models import  PayloadWrapperListType, EmailMessage
 from file_processing import file_color_processor
 from utils.file_functions import load_dict_from_json
+
+import db_models
+from db_models import Users, UserRequest
+from database import engine, SessionLocal
+from sqlalchemy.orm import Session
+from auth.api_key import generate_api_key, EMAIL_BODY_HTML
+
+# Create DB using record object models specified
+db_models.Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+async def validate_api_key(apikey):
+    db = SessionLocal()
+    
+    result = db.query(Users).filter(Users.api_key == apikey.lower()).first()
+    db.close()
+    
+    print(">>Result:", result)
+    
+    # Returns false on user record not found or is not yet activated
+    # Returns true if apikey is found AND active state
+    if (result is None) or (result.active == False):
+        return False
+    elif (result is not None) and (result.active == True):
+        return True
+    
+    
+db_dependency = Annotated[Session, Depends(get_db)]
+# user_dependency = Annotated[Session, Depends(get_current_user)] # for use with from .auth import get_current_user
+
 
 """
 CLI curl commands:
@@ -35,7 +76,7 @@ curl -d @data.json http://127.0.0.1:8000/api/upload/single
 """
 
 # Create our upload directory
-UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR = plb.Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Initially load the color names JSON file as a dict:
@@ -72,14 +113,60 @@ app.add_middleware(
 load_dotenv()
 resend.api_key = os.getenv("RESEND_API_KEY")
 
-params: resend.Emails.SendParams = {
-    "from": "Acme <onboarding@resend.dev>",
-    "to": ["delivered@resend.dev"],
-    "subject": "hello world",
-    "html": "<strong>it works!</strong>",
-}
+# example DB query in endpoing
+@app.get("/", status_code=status.HTTP_200_OK)
+async def read_all(db: db_dependency):
+    return db.query(Users).all()
+
+# Read a single user record from active Users DB, with explicit HTTP response
+# code and only a valid integer
+@app.get("/user/{user_id}", status_code=status.HTTP_200_OK)
+async def read_user(db: db_dependency, user_id: int = Path(gt=0)):
+    user_model = db.query(Users).filter(Users.id == user_id).first()
+
+    if user_model is not None:
+        return user_model
+    raise HTTPException(status_code=404, detail="No active User record found.")
+
+# POST (create) a single new User record
+@app.post("/user", status_code=status.HTTP_200_OK)
+async def create_user(db: db_dependency, user_request: UserRequest):
+    user_model = Users(**user_request.model_dump())
+    db.add(user_model)
+    db.commit()
+    
+# PATCH (PUT, update) a single User record
+@app.put("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_user(db: db_dependency, 
+                      user_request: UserRequest,
+                      user_id: int = Path(gt=0)):
+    user_model = db.query(Users).filter(Users.id == user_id).first()
+    if user_model is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    user_model.api_key = user_request.api_key
+    user_model.email = user_request.email
+    user_model.auth_level = user_request.auth_level
+    user_model.active = user_request.active
+    
+    db.add(user_model)
+    db.commit()
 
 
+
+# 
+@app.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(db: db_dependency, user_id: int = Path(gt=0)):
+    user_model = db.query(Users).filter(Users.id == user_id).first()
+    if user_model is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    db.query(Users).filter(Users.id == user_id).delete()
+    db.commit()
+    
+    
+    
+    
 # @app.exception_handler(RequestValidationError)
 # async def validation_exception_handler(request: Request, exc: RequestValidationError):
 #     errors = {}
@@ -114,8 +201,15 @@ def read_test():
 def send_email():
     resend_status = ""
     
+    test_params: resend.Emails.SendParams = {
+        "from": "Acme <onboarding@resend.dev>",
+        "to": ["delivered@resend.dev"],
+        "subject": "Hello world",
+        "html": "<strong>it works!</strong>",
+    }
+    
     try:
-        email = resend.Emails.send(params)
+        email = resend.Emails.send(test_params)
         print(email)
         resend_status = "Email sent"
     except ResendError as error:
@@ -129,9 +223,88 @@ def send_email():
     )
     
     
+@app.get("/activate")
+async def activate_api_key(db: db_dependency, 
+                           apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)]):
+    # Check for existing record with the API key record
+    user_model = db.query(Users).filter(Users.api_key == apikey)
+    if user_model is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User not found with this API key."
+        )
+    if user_model.api_key == True:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="API key is already active.")
+
+    user_model.active = True
+    db.add(user_model)
+    db.commit()
+    
+    return{
+        "message": f"User {user_model.email} API key {apikey} now active for use."
+    }
+
+
+# API key test path: append URL with ?apikey=<key> to verify valid key
+# and/or is in DB
+@app.get("/api/check_apikey")
+async def test_api_key(apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)], 
+                       authenticated: Annotated[bool, Depends(validate_api_key)]
+                        ):
+    if not authenticated:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
+                            detail="API key not valid or not found."
+                            )
+    return{
+        "message": "API key validated!",
+        "api_key": apikey.lower()
+    }
+    
+
 # ==== POST endpoints ====
 
-# Send email for API key use
+# Generate an API key and send email w/ activation link
+@app.post("/get-apikey")
+def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
+    resend_status = ""
+    # payload = email_payload.model_dump()
+    
+    # Generate a simple API key and verify not alredy in User DB
+    # if it exists, generate another key & repeat
+    check = True
+    while check:
+        new_key = generate_api_key(8)
+        check = validate_api_key(new_key)
+    
+    user_model = UserRequest()
+    user_model.email = email_payload.to
+    user_model.api_key = new_key
+    user_model.active = False
+    # Save new user record (inactive) to DB
+    db.add(user_model)
+    db.commit()
+    # Send a notification email & link for activation
+    email_params: resend.Emails.SendParams = {    
+        "from": email_payload.from_field,
+        "to": email_payload.to,
+        "subject": email_payload.subject,
+        "html": EMAIL_BODY_HTML.format(apikey=f"{apikey}", 
+                                       activation_url="")
+    }
+
+    try:
+        smtp_response = resend.Emails.send(email_params)
+        resend_status = "Email sent!"
+    except ResendError as error:
+        resend_status = error.message
+        
+    return(
+        {
+            "email_status": resend_status,
+        }
+    )
+
+
 @app.post("/send")
 def send_email(email_payload: EmailMessage):
     resend_status = ""
@@ -155,6 +328,7 @@ def send_email(email_payload: EmailMessage):
             "email_status": resend_status,
         }
     )
+
 
 
 # Receives a POST request with color options in body
@@ -244,7 +418,7 @@ async def upload_single_file(options_payload: str = Form(...), file: UploadFile 
 
     # # == Validation has passed ==
     # # Create unique temp filename to prevent conflicts
-    file_ext = Path(file.filename).suffix # NOTE: Includes '.'!
+    file_ext = plb.Path(file.filename).suffix # NOTE: Includes '.'!
     file_prefix = file.filename[:-4]
     
     # unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -365,7 +539,7 @@ async def upload_multiple_files(options: str = Form(...), files: list[UploadFile
     logfile_paths = []
     
     for i, file in enumerate(files):
-        file_exts.append(Path(file.filename).suffix) # NOTE: Includes '.'!
+        file_exts.append(plb.Path(file.filename).suffix) # NOTE: Includes '.'!
         file_prefixes.append(file.filename[:-4])
         
         # unique_filename = f"{uuid.uuid4()}{file_ext}"

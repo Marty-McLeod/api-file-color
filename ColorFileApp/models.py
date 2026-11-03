@@ -15,6 +15,7 @@ import re
 # strings
 REGEX_INNER_OBJECT= r"\w+\((.*)\)"
 
+
 # Create Pydantic data model for JSON options received in HTTP body
 #
 # Pydantic model-friendly array lists for keynames
