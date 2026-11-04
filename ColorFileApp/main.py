@@ -25,8 +25,13 @@ from utils.file_functions import load_dict_from_json
 import db_models
 from db_models import Users, UserRequest
 from database import engine, SessionLocal
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session
-from auth.api_key import generate_api_key, EMAIL_BODY_HTML
+from auth.api_key import (
+    generate_api_key, EMAIL_BODY_HTML, 
+    ACTIVATION_URL_HTTP, EMAIL_FROM_FIELD,
+    TEST_ACTIVATION_URL_HTTP
+)
 
 # Create DB using record object models specified
 db_models.Base.metadata.create_all(bind=engine)
@@ -38,22 +43,31 @@ def get_db():
     finally:
         db.close()
 
-async def validate_api_key(apikey):
+# Validates an API key received as a URL path ("Query") param
+# Default: returns Boolean True/False. Set to False to 
+# return a string status value instead
+def validate_api_key(apikey: str, return_str=False):
     db = SessionLocal()
-    
-    result = db.query(Users).filter(Users.api_key == apikey.lower()).first()
+    result = db.query(Users).filter(Users.api_key == apikey).first()
     db.close()
-    
-    print(">>Result:", result)
     
     # Returns false on user record not found or is not yet activated
     # Returns true if apikey is found AND active state
-    if (result is None) or (result.active == False):
-        return False
-    elif (result is not None) and (result.active == True):
-        return True
-    
-    
+    match return_str:
+        case False:
+            if (result is None) or (result.active == False):
+                return False
+            elif (result is not None) and (result.active == True):
+                return True
+        case True:
+            if (result is None):
+                return "not found"
+            elif (result is not None) and (result.active == False):
+                return "not activated"
+            elif (result is not None) and (result.active == True):
+                return "active"
+            
+
 db_dependency = Annotated[Session, Depends(get_db)]
 # user_dependency = Annotated[Session, Depends(get_current_user)] # for use with from .auth import get_current_user
 
@@ -227,7 +241,8 @@ def send_email():
 async def activate_api_key(db: db_dependency, 
                            apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)]):
     # Check for existing record with the API key record
-    user_model = db.query(Users).filter(Users.api_key == apikey)
+    user_model = db.query(Users).filter(Users.api_key == apikey).first()
+    
     if user_model is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User not found with this API key."
@@ -247,23 +262,20 @@ async def activate_api_key(db: db_dependency,
 
 # API key test path: append URL with ?apikey=<key> to verify valid key
 # and/or is in DB
-@app.get("/api/check_apikey")
-async def test_api_key(apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)], 
-                       authenticated: Annotated[bool, Depends(validate_api_key)]
-                        ):
-    if not authenticated:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
-                            detail="API key not valid or not found."
-                            )
+@app.get("/check-apikey")
+async def test_api_key(apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)]):
+    key_status = validate_api_key(apikey, return_str=True)
+                                  
     return{
-        "message": "API key validated!",
-        "api_key": apikey.lower()
+        "message": f"API key is {key_status}",
+        "api_key": apikey
     }
     
 
 # ==== POST endpoints ====
 
-# Generate an API key and send email w/ activation link
+# Generate a user record + API key and send email w/ activation link
+# 
 @app.post("/get-apikey")
 def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
     resend_status = ""
@@ -276,30 +288,46 @@ def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
         new_key = generate_api_key(8)
         check = validate_api_key(new_key)
     
-    user_model = UserRequest()
-    user_model.email = email_payload.to
-    user_model.api_key = new_key
-    user_model.active = False
-    # Save new user record (inactive) to DB
-    db.add(user_model)
+    # Create new user record in the DB from body parameters
+    user_model = Users(
+        email = email_payload.to, 
+        auth_level = "user",
+        api_key = new_key,
+        active = False
+    )
+    
+    # Check for existing user record based on email address.
+    # Existing record: update the API key (allows replacing a lost key)
+    # New record: save new user to DB
+    record = db.query(Users).filter(Users.email == user_model.email).first()
+    
+    if record is not None:
+        record.api_key = user_model.api_key
+        db.add(record)
+    else:
+        db.add(user_model)
+    
     db.commit()
+
     # Send a notification email & link for activation
     email_params: resend.Emails.SendParams = {    
-        "from": email_payload.from_field,
+        "from": EMAIL_FROM_FIELD,
         "to": email_payload.to,
         "subject": email_payload.subject,
-        "html": EMAIL_BODY_HTML.format(apikey=f"{apikey}", 
-                                       activation_url="")
+        "html": f"{EMAIL_BODY_HTML.format(apikey=f"{new_key}", 
+                                       activation_url=f"{TEST_ACTIVATION_URL_HTTP}")}"
     }
-
+    
     try:
         smtp_response = resend.Emails.send(email_params)
         resend_status = "Email sent!"
     except ResendError as error:
         resend_status = error.message
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                            detail=error.message)
         
     return(
-        {
+        {   "message": f"User {user_model.email} created.",
             "email_status": resend_status,
         }
     )
@@ -311,7 +339,7 @@ def send_email(email_payload: EmailMessage):
     # print(">>> Payload:", email_payload)
     
     email_params: resend.Emails.SendParams = {    
-        "from": email_payload.from_field,
+        "from": EMAIL_FROM_FIELD,
         "to": email_payload.to,
         "subject": email_payload.subject,
         "html": email_payload.html
@@ -321,7 +349,8 @@ def send_email(email_payload: EmailMessage):
         smtp_response = resend.Emails.send(email_params)
         resend_status = "Email sent!"
     except ResendError as error:
-        resend_status = error.message
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=error.message)
         
     return(
         {

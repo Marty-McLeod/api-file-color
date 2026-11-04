@@ -67,12 +67,12 @@ COLORSWAP_ALLOWED_ORDER_VALS = [ "r_to_g", "g_to_r", "g_to_b", "b_to_g", "r_to_b
 class EmailMessage(BaseModel):
     # Required fields (must use an alias for "from" as it's a reserved keyword)
     from_field: Annotated[
-            str, StringConstraints(min_length=3, max_length=30, to_lower=True),
+            str, StringConstraints(min_length=3, max_length=50, to_lower=True),
             Field(alias="from") ]
     to:  Annotated[
-            str, StringConstraints(min_length=3, max_length=30, to_lower=True) ]
+            str, StringConstraints(min_length=3, max_length=50, to_lower=True) ]
     subject: Annotated[
-            str, StringConstraints(min_length=3, max_length=60) ]
+            str, StringConstraints(min_length=3, max_length=120) ]
     # Optional fields
     bcc:  Annotated[
             str | None , StringConstraints(min_length=3, max_length=30, to_lower=True)
