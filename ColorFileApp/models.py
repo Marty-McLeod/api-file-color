@@ -64,6 +64,7 @@ COLORSWAP_ALLOWED_PARAM_KEY_NAMES = [ "order" ]
 COLORSWAP_ALLOWED_ORDER_VALS = [ "r_to_g", "g_to_r", "g_to_b", "b_to_g", "r_to_b", "b_to_r" ]
 
 
+# ------------------ Models for use with Frontend application --------------------
 class EmailMessage(BaseModel):
     # Required fields (must use an alias for "from" as it's a reserved keyword)
     from_field: Annotated[
@@ -87,8 +88,17 @@ class EmailMessage(BaseModel):
             str | None, StringConstraints(max_length=400)] = ""            
     text:  Annotated[
            str | None, StringConstraints(max_length=400)] = ""           
-
     
+    
+    
+class EmailAddress(BaseModel):
+    email: Annotated[str, StringConstraints(min_length=6, max_length=200, to_lower=True)]
+    
+    
+
+# ----------------------------------------------------------------------------------
+
+
 
 # == Validation models for options JSON array, containing an array (list) ==
 #   I.e.:

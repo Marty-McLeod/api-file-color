@@ -18,9 +18,10 @@ import pathlib as plb
 import random, json, os, logging
 
 from validators import DocumentValidator
-from models import  PayloadWrapperListType, EmailMessage
+from models import  PayloadWrapperListType, EmailMessage, EmailAddress
 from file_processing import file_color_processor
 from utils.file_functions import load_dict_from_json
+from utils.validate_email import validate_email_address
 
 import db_models
 from db_models import Users, UserRequest
@@ -30,7 +31,7 @@ from sqlalchemy.orm import Session
 from auth.api_key import (
     generate_api_key, EMAIL_BODY_HTML, 
     ACTIVATION_URL_HTTP, EMAIL_FROM_FIELD,
-    TEST_ACTIVATION_URL_HTTP
+    TEST_ACTIVATION_URL_HTTP, EMAIL_SUBJECT
 )
 
 # Create DB using record object models specified
@@ -127,57 +128,58 @@ app.add_middleware(
 load_dotenv()
 resend.api_key = os.getenv("RESEND_API_KEY")
 
+# ==== FASTAPI COURSE EXAMPLE CODE HERE ====
 # example DB query in endpoing
-@app.get("/", status_code=status.HTTP_200_OK)
-async def read_all(db: db_dependency):
-    return db.query(Users).all()
+# @app.get("/", status_code=status.HTTP_200_OK)
+# async def read_all(db: db_dependency):
+#     return db.query(Users).all()
 
 # Read a single user record from active Users DB, with explicit HTTP response
 # code and only a valid integer
-@app.get("/user/{user_id}", status_code=status.HTTP_200_OK)
-async def read_user(db: db_dependency, user_id: int = Path(gt=0)):
-    user_model = db.query(Users).filter(Users.id == user_id).first()
+# @app.get("/user/{user_id}", status_code=status.HTTP_200_OK)
+# async def read_user(db: db_dependency, user_id: int = Path(gt=0)):
+#     user_model = db.query(Users).filter(Users.id == user_id).first()
 
-    if user_model is not None:
-        return user_model
-    raise HTTPException(status_code=404, detail="No active User record found.")
+#     if user_model is not None:
+#         return user_model
+#     raise HTTPException(status_code=404, detail="No active User record found.")
 
 # POST (create) a single new User record
-@app.post("/user", status_code=status.HTTP_200_OK)
-async def create_user(db: db_dependency, user_request: UserRequest):
-    user_model = Users(**user_request.model_dump())
-    db.add(user_model)
-    db.commit()
+# @app.post("/user", status_code=status.HTTP_200_OK)
+# async def create_user(db: db_dependency, user_request: UserRequest):
+#     user_model = Users(**user_request.model_dump())
+#     db.add(user_model)
+#     db.commit()
     
 # PATCH (PUT, update) a single User record
-@app.put("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_user(db: db_dependency, 
-                      user_request: UserRequest,
-                      user_id: int = Path(gt=0)):
-    user_model = db.query(Users).filter(Users.id == user_id).first()
-    if user_model is None:
-        raise HTTPException(status_code=404, detail="User not found.")
+# @app.put("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def update_user(db: db_dependency, 
+#                       user_request: UserRequest,
+#                       user_id: int = Path(gt=0)):
+#     user_model = db.query(Users).filter(Users.id == user_id).first()
+#     if user_model is None:
+#         raise HTTPException(status_code=404, detail="User not found.")
     
-    user_model.api_key = user_request.api_key
-    user_model.email = user_request.email
-    user_model.auth_level = user_request.auth_level
-    user_model.active = user_request.active
+#     user_model.api_key = user_request.api_key
+#     user_model.email = user_request.email
+#     user_model.auth_level = user_request.auth_level
+#     user_model.active = user_request.active
     
-    db.add(user_model)
-    db.commit()
+#     db.add(user_model)
+#     db.commit()
 
 
 
 # 
-@app.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(db: db_dependency, user_id: int = Path(gt=0)):
-    user_model = db.query(Users).filter(Users.id == user_id).first()
-    if user_model is None:
-        raise HTTPException(status_code=404, detail="User not found.")
+# @app.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_user(db: db_dependency, user_id: int = Path(gt=0)):
+#     user_model = db.query(Users).filter(Users.id == user_id).first()
+#     if user_model is None:
+#         raise HTTPException(status_code=404, detail="User not found.")
     
-    db.query(Users).filter(Users.id == user_id).delete()
-    db.commit()
-    
+#     db.query(Users).filter(Users.id == user_id).delete()
+#     db.commit()
+# ==== END FASTAPI COURSE EXAMPLE CODE ====
     
     
     
@@ -206,6 +208,7 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Response status: {response.status_code}")
     return response
 
+# ========================
 # ==== GET endpoints ====
 @app.get("/message")
 def read_test():
@@ -224,10 +227,8 @@ def send_email():
     
     try:
         email = resend.Emails.send(test_params)
-        print(email)
         resend_status = "Email sent"
     except ResendError as error:
-        print(error)
         resend_status = error.message
         
     return(
@@ -272,14 +273,21 @@ async def test_api_key(apikey: Annotated[str, Query(min_length=8, max_length=8, 
     }
     
 
+# ========================
 # ==== POST endpoints ====
 
 # Generate a user record + API key and send email w/ activation link
 # 
 @app.post("/get-apikey")
-def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
+def create_user_and_key(db: db_dependency, email_address: EmailAddress):
     resend_status = ""
-    # payload = email_payload.model_dump()
+    
+    # validate the email address string as being acceptable with
+    # characters expected. Raise HTTP error if invalid
+    if not validate_email_address(email_address.email):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Email address '{email}' has bad characters or format."
+                            )
     
     # Generate a simple API key and verify not alredy in User DB
     # if it exists, generate another key & repeat
@@ -290,7 +298,7 @@ def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
     
     # Create new user record in the DB from body parameters
     user_model = Users(
-        email = email_payload.to, 
+        email = email_address.email, 
         auth_level = "user",
         api_key = new_key,
         active = False
@@ -308,14 +316,15 @@ def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
         db.add(user_model)
     
     db.commit()
-
+          
     # Send a notification email & link for activation
     email_params: resend.Emails.SendParams = {    
         "from": EMAIL_FROM_FIELD,
-        "to": email_payload.to,
-        "subject": email_payload.subject,
-        "html": f"{EMAIL_BODY_HTML.format(apikey=f"{new_key}", 
-                                       activation_url=f"{TEST_ACTIVATION_URL_HTTP}")}"
+        "to": email_address.email,
+        "subject": EMAIL_SUBJECT,
+        "html": EMAIL_BODY_HTML.format(apikey=f"{new_key}", 
+                                       activation_url=f"{TEST_ACTIVATION_URL_HTTP}"
+                                       )
     }
     
     try:
@@ -336,7 +345,6 @@ def create_user_and_key(db: db_dependency, email_payload: EmailMessage):
 @app.post("/send")
 def send_email(email_payload: EmailMessage):
     resend_status = ""
-    # print(">>> Payload:", email_payload)
     
     email_params: resend.Emails.SendParams = {    
         "from": EMAIL_FROM_FIELD,
@@ -366,7 +374,6 @@ async def receive_file_options(options_payload: PayloadWrapperListType):
 
     # Example of accessing a single dict in the validated data ( is in a list):
     # data = options_payload.options[0].hex_rgb
-    # print("\noptions_payload:", data)
     
     return {
         "received": {
