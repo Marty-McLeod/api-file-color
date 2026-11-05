@@ -14,6 +14,8 @@ test_output.txt
 
 # Disregard Python cached files
 ColorFileApp/__pycache__/
+ColorFileApp/utils/__pycache__/
+ColorFileApp/auth/__pycache__/
 
 # Environment variables file should not/cannot be pushed to GitHub
 ColorFileApp/.env

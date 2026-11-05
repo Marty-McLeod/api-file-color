@@ -236,7 +236,7 @@ def send_email():
         }
     )
     
-    
+
 @app.get("/activate")
 async def activate_api_key(db: db_dependency, 
                            apikey: Annotated[str, Query(min_length=8, max_length=8, to_lower=True)]):
